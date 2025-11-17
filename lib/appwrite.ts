@@ -1,5 +1,6 @@
+import * as Linking from 'expo-linking';
+import { openAuthSessionAsync } from 'expo-web-browser';
 import { Account, Avatars, Client, OAuthProvider } from 'react-native-appwrite';
-import * as Linking from 'expo-linking'
 
 export const config = {
     platform: 'com.bd.brooksstate',
@@ -19,29 +20,29 @@ export const account = new Account(client);
 
 export async function login() {
     try {
-        const redirectUri = Linking.createURL(path: '/');
+        const redirectUri = Linking.createURL('/');
 
         const response = await account.createOAuth2Token(OAuthProvider.Google, redirectUri);
 
-        if(!response) throw new Error(message: 'Failed to login');
+        if(!response) throw new Error('Failed to login');
 
         const browserResult = await openAuthSessionAsync(
             response.toString(),
             redirectUri
         )
 
-        if(browserResult.type != 'success') throw new Error(message: 'Failed to login');
+        if(browserResult.type != 'success') throw new Error('Failed to login');
 
         const url = new URL(browserResult.url);
 
         const secret = url.searchParams.get('secret')?.toString();
         const userId = url.searchParams.get('userId')?.toString();
 
-        if(!secret || !userId) throw new Error(message: 'Failed to login');
+        if(!secret || !userId) throw new Error('Failed to login');
 
         const session = await account.createSession(userId, secret);
 
-        if(!session) throw new Error(message: 'Failed to create a session');
+        if(!session) throw new Error('Failed to create a session');
 
         return true
     } catch (e) {
@@ -52,7 +53,7 @@ export async function login() {
 
 export async function logout() {
     try {
-        await account.deleteSession(sessionId: 'current');
+        await account.deleteSession('current');
         return true;
     } catch(e) {
         console.error(e);
@@ -60,20 +61,21 @@ export async function logout() {
     } 
 }
 
-export async function getUser() {
-    try {
-        const response = await account.get();
+export async function getCurrentUser() {
+  try {
+    const result = await account.get();
+    if (result.$id) {
+      const userAvatar = avatar.getInitials(result.name);
 
-        if(response.$id) {
-            const userAvatar = avatar.getInitials(response.name);
+      return {
+        ...result,
+        avatar: userAvatar.toString(),
+      };
+    }
 
-            return {
-                ...response,
-                avatar: userAvatar.toString();
-            }
-        }
-    } catch(e) {
-        console.error(e);
-        return null;
-    } 
+    return null;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
 }
